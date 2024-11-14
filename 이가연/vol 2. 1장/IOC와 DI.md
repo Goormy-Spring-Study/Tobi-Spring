@@ -153,8 +153,73 @@ IOC 컨테이너 종류는 StaticApplicationContext, GenericApplicationContext, 
 
 ![image](https://github.com/user-attachments/assets/df165524-fb55-4b79-8e98-a04997b8cc07)
 
+
+
 1. main() 메서드 역할을 하는 서블릿을 생성한다. 
 2. 애플리케이션 컨텍스트를 생성한다. 
 3. 요청이 서블릿으로 들어올 때마다 getBean() 메서드로 필요한 빈을 가져와 정해진 메서드를 실행한다.
 
 이 2,3 번의 과정은 (애플리케이션 컨텍스트를 생성하고, 설정 메타정보로 초기화해, 요청마다 적절한 빈을 찾아서 실행해줌) 스프링의 DispatchServlet이 담당한다.
+
+# 1.2 IoC/DI를 위한 빈 설정 메타정보 작성
+
+![image](https://github.com/user-attachments/assets/599f53e0-39c7-4db3-9f1a-2a5f5c4e2258)
+
+
+XML, 애노테이션, 자바 코드로 작성된 빈 설정 정보가 전용 리더를 통해 읽혀져서 BeanDefinition 타입의 오브젝트로 변환되고 그 정보를 IOC 컨테이너가 활용한다. 
+
+이 중에서 현재 사용되는 방식은 대부분 애노테이션 방식이다. 
+
+```java
+@Component
+public class AnnotatedHello{
+}
+```
+
+```java
+@Test
+    public void 컴포넌트빈주입테스트(){
+        ApplicationContext ctx =
+                new AnnotationConfigApplicationContext(
+                        "study.tobi.ioc.bean");
+
+        AnnotatedHello hello = ctx.getBean("annotatedHello", AnnotatedHello.class);
+
+        Assertions.assertThat(hello).isNotNull();
+    }
+```
+
+`@Component` 애노테이션이 붙은 클래스는 컨테이너가 관리하는 빈으로 등록된다. 
+
+해당 애노테이션은 **컴포넌트 스캔** 대상이므로, `@ComponentScan`이나 `@SpringBootApplication`에 의한 자동 스캔을 통해서만 등록된다.
+
+```java
+@Configuration
+public class AnnotatedHelloConfig {
+
+    @Bean
+    public AnnotatedHello AnnotatedHello(){
+        return new AnnotatedHello();
+    }
+}
+```
+
+```java
+@Test
+    public void 자바코드빈주입테스트(){
+
+        ApplicationContext ctx = new AnnotationConfigApplicationContext(AnnotatedHelloConfig.class);
+        AnnotatedHello hello = ctx.getBean("AnnotatedHello", AnnotatedHello.class);
+
+        AnnotatedHelloConfig config = ctx.getBean("annotatedHelloConfig", AnnotatedHelloConfig.class);
+        Assertions.assertThat(config).isNotNull();
+    }
+```
+
+`@Bean` 도 스프링 빈 정의 애노테이션이지만, 메서드가 반환하는 객체를 빈으로 정의할 때 사용한다. 
+
+`@Configuration`이 붙은 클래스 내에 선언된 메서드 위에 사용된다.
+
+여기서 @Configuration 은 @Bean 애노테이션으로 스프링 빈을 정의하는 설정 클래스임을 나타내는 애노테이션이다. 
+
+한편, @Bean 애노테이션이 정의된 메서드는 `싱글톤`을 보장하기 위해 스프링이 내부적으로 프록시 객체를 사용하기 때문에, **동일한 빈 메서드에 대해 여러번 호출돼도 하나의 인스턴스만이 반환**된다.
